@@ -1,0 +1,11 @@
+download (with aspera connect for firefox installed and destination folders configured, just click default folder so that the folders will go to the default download folder.)
+
+decypt (33708 pw is belsky and others are bigdata, password is in the user profile in c: drive as .ncbi and can be updated by the vdb-passwd.exe)
+
+decompress
+
+download the results https://pgc.unc.edu/Sharing.php#SharingOpp
+
+get the snap proxy for each data by uploading the list of snps
+
+use plink to calc the grs (replace the results snp names with the proxy snp names and correct name format if need)
