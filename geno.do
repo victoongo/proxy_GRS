@@ -2,6 +2,54 @@ set more off
 set matsize 11000
 
 
+***** Step O, QC with 95% call rate 
+* ARIC
+cd "D:\data_work\aric\geno"
+*!plink2 --bfile ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out --geno 0.05 --make-bed --out ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out_qc
+!plink2 --bfile ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out --missing --out ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out_missing
+
+insheet using ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out_missing.lmiss, clear
+forvalues c=1/10 {
+	replace v1=subinstr(v1,"  "," ",.)
+}
+replace v1=trim(v1)
+split v1, p(" ")
+drop v1
+do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+keep snp f_miss
+rename snp probesetid
+sort probesetid
+save lmiss, replace 
+
+* MESA
+cd "D:\data_work\mesa\geno"
+*!plink2 --bfile share_mesa  --geno 0.05 --make-bed --out share_mesa_qc
+!plink2 --bfile share_mesa --missing --out share_mesa_missing
+
+insheet using share_mesa_missing.lmiss, clear
+forvalues c=1/10 {
+	replace v1=subinstr(v1,"  "," ",.)
+}
+replace v1=trim(v1)
+split v1, p(" ")
+drop v1
+do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+first_row_as_varname long
+keep snp f_miss
+rename snp probesetid
+sort probesetid
+save lmiss, replace 
+
+*SAGE
+cd "D:\data_work\sage\geno"
+!plink2 --bfile original\GENEVA_SAGE_HR_GENO_FINAL_ZEROED  --geno 0.05 --make-bed --out GENEVA_SAGE_HR_GENO_FINAL_ZEROED_qc
+
+* CHS
+*cd "D:\data_work\chs\geno"
+*!plink2 --bfile original\c1_CHS_v3  --mind 0.05 --make-bed --out ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out_qc
+
+
+
 ***** Step A, preping the marker info files to get the rs snp names
 *ARIC
 cd D:\data_work\aric\geno
@@ -14,12 +62,19 @@ save GenomeWideSNP_6.na27.annot.dta, replace
 	use GenomeWideSNP_6.na27.annot.dta, clear
 	* 2. KEEP ONLY RS NAMES THAT WE WANT - DROP DUPLICATES (REQUIRES EXTRA STEP TO PICK THE BEST)
 	keep probesetid rs
-	bysort rs: keep if _n==1 //(2987 observations deleted)
+	drop if rs==""
+	merge 1:1 probesetid using lmiss, nogen keep(3)
+	sort rs f_miss
+	by rs: keep if _n==1 
+	drop f_miss
 	save crossref_list, replace
 	* 3. EXTRACT REMAINING PROBESET ID TO TEXT FILE
 	outfile probesetid using "probesetid_list.raw", noquote replace
 	* 4. EXTRACT SAME SNPS WITH RS NAMES TO ANOTHER TEXT FILE
 	outfile probesetid rs using "probesetid_rs_list.raw", noquote replace
+	keep rs
+	sort rs
+	save rs_list, replace
 
 *CHS
 cd D:\data_work\chs\geno
@@ -57,11 +112,19 @@ save GenomeWideSNP_6.na24.annot.dta, replace
 
 	***** Step A1, extract probesetid and rs for later conversion
 	use GenomeWideSNP_6.na24.annot.dta, clear
-	keep probe_set_id rs
-	bysort rs: keep if _n==1 //(10278 observations deleted)
+	rename probe_set_id probesetid
+	keep probesetid rs
+	drop if rs==""
+	merge 1:1 probesetid using lmiss, nogen keep(3)
+	sort rs f_miss
+	by rs: keep if _n==1 
+	drop f_miss
 	save crossref_list, replace
-	outfile probe_set_id using "probesetid_list.raw", noquote replace
-	outfile probe_set_id rs using "probesetid_rs_list.raw", noquote replace
+	outfile probesetid using "probesetid_list.raw", noquote replace
+	outfile probesetid rs using "probesetid_rs_list.raw", noquote replace
+	keep rs
+	sort rs
+	save rs_list, replace
 	
 
 *SAGE
@@ -72,17 +135,19 @@ sort rs
 save SNP_annotation.dta, replace
 
 
+
 ***** Step B, merge npu and gru 
 * CHS
 cd "D:\data_work\chs\geno"
-!plink --bfile original\c1_CHS_v3 --bmerge original\c2_CHS_v3.bed original\c2_CHS_v3.bim original\c2_CHS_v3.fam --make-bed --out CHS_v3
+!plink2 --bfile original\c1_CHS_v3 --bmerge original\c2_CHS_v3.bed original\c2_CHS_v3.bim original\c2_CHS_v3.fam --make-bed --out CHS_v3
 
 * MESA
 cd "D:\data_work\mesa\geno"
-!plink --bfile original\SHARE_MESA_c1 --bmerge original\SHARE_MESA_c2.bed original\SHARE_MESA_c2.bim original\SHARE_MESA_c2.fam --make-bed --out share_mesa
+!plink2 --bfile original\SHARE_MESA_c1 --bmerge original\SHARE_MESA_c2.bed original\SHARE_MESA_c2.bim original\SHARE_MESA_c2.fam --make-bed --out share_mesa
 
 
-***** Step C, convert probesetid to RS
+
+***** Step D, convert probesetid to RS
 * ARIC
 cd D:\data_work\aric\geno
 * 5. EXTRACT BINARY DATA BASED ON PROBESET ID
@@ -97,11 +162,17 @@ cd D:\data_work\mesa\geno
 * 6. USE UPDATE NAMES TO CHANGE THE NEW DATA'S PROSETID NAMES TO RS NAMES
 !plink2 --bfile probesetid_list --update-map probesetid_rs_list.raw --update-name --make-bed --out share_mesa_rs
 
-***** Step D, convert ped to binary 
+
+
+***** Step E, convert ped to binary 
 * Dunedin
 cd "D:\data_work\dunedin\geno"
 !plink2 --file Dunedin_SNP_arrays_IDcorrected --make-bed --out Dunedin_SNP_arrays_IDcorrected
-
+insheet using "Dunedin_SNP_arrays_IDcorrected.bim", tab clear
+keep v2 
+rename v2 rs
+sort rs
+save rs_list, replace
 
 
 ***** extract

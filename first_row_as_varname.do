@@ -1,8 +1,14 @@
+capture program drop first_row_as_varname 
+program first_row_as_varname 
 unab varnames: *
+di "`varnames'"
 foreach y of local varnames {
-		quietly: ta `y'
-		local n=r(r)
-		*di `n'
+		if "`1'"=="long" local n=_N
+		else {
+			quietly: ta `y'
+			local n=r(r)
+		}
+		di `n' "`y'"
 		if `n'>0 {
 			replace `y'=lower(`y') if _n==1
 			quietly replace `y'=subinstr(`y', " ", "_", .) if _n==1 
@@ -19,3 +25,4 @@ foreach y of local varnames {
 }
 drop if _n==1
 destring *, replace
+end

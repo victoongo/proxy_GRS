@@ -48,7 +48,7 @@ foreach p of local proj {
 
 
 
-* option 1: create two data sets with one for data and the other for var name and label to create the program to rename and label 
+* option 1: create two data sets with one for data and the other for var name and label to create the program to rename and label, didn't finish this one
 /*
 	insheet using phs000092.v1.pht000637.v1.p1.AlcoholDepAdd_Pedigree.MULTI.txt, clear
 	gen nhash=strmatch(v1, "#*")
