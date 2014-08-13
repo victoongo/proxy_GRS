@@ -16,6 +16,7 @@ replace v1=trim(v1)
 split v1, p(" ")
 drop v1
 do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+first_row_as_varname long
 keep snp f_miss
 rename snp probesetid
 sort probesetid
@@ -84,19 +85,22 @@ gen nhash=strmatch(v1, "#*")
 drop if nhash==1
 drop nhash
 do "D:\victor\Dropbox\P_dbGaP\first_row_as_varname.do"
+first_row_as_varname long
 sort rs
 save HumanCNV370v1-Duo.dta, replace
 */
 insheet using "D:\data_work\chs\geno\marker_info\HumanOmni1-Quad_v1-0_B.csv", clear
 drop if _n<=7
-do "D:\victor\Dropbox\P_dbGaP\first_row_as_varname.do"
+do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+first_row_as_varname long
 rename name rs
 sort rs
 save HumanOmni1-Quad_v1-0_B.dta, replace
 
 insheet using "D:\data_work\chs\geno\marker_info\HumanOmni1-Quad_v1-0_H.csv", clear
 drop if _n<=7
-do "D:\victor\Dropbox\P_dbGaP\first_row_as_varname.do"
+do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+first_row_as_varname long
 rename name rs
 sort rs
 save HumanOmni1-Quad_v1-0_H.dta, replace
@@ -105,7 +109,8 @@ save HumanOmni1-Quad_v1-0_H.dta, replace
 cd D:\data_work\mesa\geno
 insheet using "D:\data_work\mesa\geno\marker_info\GenomeWideSNP_6.na24.annot.csv", clear
 drop if _n<=15
-do "D:\victor\Dropbox\P_dbGaP\first_row_as_varname.do"
+do "D:\victor\Dropbox\P_dbGaP\do\first_row_as_varname.do"
+first_row_as_varname long
 rename dbsnp_rs_id rs
 sort rs
 save GenomeWideSNP_6.na24.annot.dta, replace

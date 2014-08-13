@@ -103,7 +103,7 @@ save prx_ra, replace
 
 ***** Step C: prep the downloaded geno data for extraction
 cd "D:\victor\data_live"
-local studies dunedin //aric mesa  //sage
+local studies dunedin aric mesa  //sage
 local aric ARIC_PLINK_flagged_chromosomal_abnormalities_zeroed_out_rs
 local mesa SHARE_MESA_rs
 *local sage GENEVA_SAGE_HR_GENO_FINAL_ZEROED_qc
@@ -148,6 +148,11 @@ foreach x of local studies {
 			
 			merge m:1 rs using D:\data_work/`x'\geno/rs_list, nogen keep (3)
 			if _N>0 {
+				
+				* create the proxy snp list for extraction // if you want to keep all the proxy snps, use the the following line to extract all proxies
+				*outfile rs prx_ra_`p' using "D:\data_work/`x'\geno/prx_ra_`p'.raw", noquote replace 
+				
+				** begin: select one proxy for each origial snp
 				gen prx_f=0
 				replace prx_f=1 if distance==0
 				bysort origin_rs: egen has_origin=max(prx_f)
@@ -155,7 +160,9 @@ foreach x of local studies {
 				bysort origin_rs: egen high_rsq=max(rsquared) if distance>0
 				keep if prx_f==1 | rsquared==high_rsq
 				bysort origin_rs: egen shortdist_rsq=min(distance) if rsquared==high_rsq & distance>0
-				keep if prx_f==1 | distance==shortdist_rsq
+				keep if prx_f==1 | distance==shortdist_rsq 
+				** end
+				
 				if _N>0 {
 					save D:\data_work/`x'\geno/proxy_`p', replace 
 					*bysort rs: keep if _n==1
@@ -164,17 +171,23 @@ foreach x of local studies {
 					order rs prx_ra_`p' es_`p'
 					outfile using "D:\data_work/`x'\geno/prx_es_ra_`p'.raw", noquote replace
 					outfile rs using "D:\data_work/`x'\geno/prx_`p'.raw", noquote replace
+					
+					** begin: create the risk allele count file for stata
+					* create the proxy snp list for extraction // the following line only keep one proxy for each original rs. 
+					* // if you want to keep all the proxy snps, comment out the following line and use the line before the "select one proxy for each snp" code to extract all proxies
 					outfile rs prx_ra_`p' using "D:\data_work/`x'\geno/prx_ra_`p'.raw", noquote replace
-					* plink to extract the snps
-					*!plink2 --bfile D:\data_work/`x'\geno/`y' --extract D:\data_work/`x'\geno/prx_`p'.raw --make-bed --out D:\data_work/`x'\geno/prx_`p'
+					* use plink to extract the snps
 					!plink2 --bfile D:\data_work/`x'\geno/`y' --extract "D:\data_work/`x'\geno/prx_`p'.raw" --recode --out D:\data_work/`x'\geno/prx_`p'
 					* plink to calculate ref allele count
 					!plink --file D:\data_work/`x'\geno/prx_`p' --recodeA --recode-allele "D:\data_work/`x'\geno/prx_ra_`p'.raw" --out D:\data_work/`x'\geno/prx_ac_`p' // plink2 doesn't work here and --reference-allele is different
+					* read the risk allele count into stata and recode the missing to .
 					insheet using "D:\data_work/`x'\geno/prx_ac_`p'.raw", delimiter(" ") clear
 					foreach snpname of varlist rs* {
 						destring `snpname', replace ignore(NA)
 					}
 					save "D:\data_work/`x'\geno/prx_ac_`p'.dta", replace
+					** end
+					
 					* plink to calculate GRS with --score (rs ra es)
 					*!plink2 --bfile D:\data_work/`x'\geno/prx_`p' --score D:\data_work/`x'\geno/prx_es_ra_`p'.raw --out D:\data_work/`x'\geno/grs_`p' // this will give a different genotyping rate in the log file
 					!plink2 --bfile D:\data_work/`x'\geno/`y' --score D:\data_work/`x'\geno/prx_es_ra_`p'.raw --out D:\data_work/`x'\geno/grs_`p'
